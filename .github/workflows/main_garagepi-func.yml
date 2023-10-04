@@ -41,4 +41,4 @@ jobs:
           app-name: 'GaragePi-Func'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_4FE48BA96C054C7491594F3605532BA9 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_7B457868A1004DFF9A723FBB6F8DF2AA }}
