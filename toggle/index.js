@@ -1,25 +1,15 @@
 const axios = require('axios');
-const passport = require('passport');
-const auth = require('../auth'); // Adjust the path as needed
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const {
-  AZURE_AD_TENANT_ID,
-  AZURE_AD_CLIENT_ID,
-  AZURE_AD_CLIENT_ID_DEV,
-  RASPBERRY_PI_ENDPOINT,
-} = process.env;
+const { AZURE_AD_TENANT_ID, RASPBERRY_PI_ENDPOINT } = process.env;
 
 const isDev = process.env.NODE_ENV === 'development';
 
 module.exports = async function (context, req) {
   try {
-    const publicKey = await fetchPublicKey();
-
-    const decodedToken = verifyJwtToken(
-      req.headers.authorization.split(' ')[1],
-      publicKey
+    const decodedToken = await verifyJwtToken(
+      req.headers.authorization.split(' ')[1]
     );
 
     if (!decodedToken) {
@@ -30,30 +20,9 @@ module.exports = async function (context, req) {
       return;
     }
 
+    console.log('Decoded token:', decodedToken);
+
     try {
-      // Check the aud claim
-      if (
-        decodedToken.aud !== AZURE_AD_CLIENT_ID &&
-        decodedToken.aud !== AZURE_AD_CLIENT_ID_DEV
-      ) {
-        console.log('Invalid audience');
-        context.res = {
-          status: 401,
-          body: 'Unauthorized: Token has incorrect audience',
-        };
-        return;
-      }
-
-      // Check the tid claim
-      if (decodedToken.tid !== AZURE_AD_TENANT_ID) {
-        console.log('Invalid tenant');
-        context.res = {
-          status: 401,
-          body: 'Unauthorized: Token has incorrect tenant',
-        };
-        return;
-      }
-
       // Check if the token is expired
       const currentTimestamp = Math.floor(Date.now() / 1000);
       if (decodedToken.exp && currentTimestamp >= decodedToken.exp) {
@@ -79,13 +48,17 @@ module.exports = async function (context, req) {
       }
 
       // Make an HTTP request to the Raspberry Pi
-      // const response = await axios.get(`${RASPBERRY_PI_ENDPOINT}/toggle`);
+      let resp = await axios.get(`${RASPBERRY_PI_ENDPOINT}/toggle`, {
+        headers: {
+          Authorization: req.headers.authorization,
+        },
+      });
 
       // Return a success response to the client
       console.log('Toggle request sent successfully');
       context.res = {
         status: 200,
-        body: 'Toggle request sent successfully',
+        body: resp.data,
       };
     } catch (error) {
       console.error('Error:', error);
@@ -106,7 +79,14 @@ module.exports = async function (context, req) {
 };
 
 // Function to verify a JWT token
-function verifyJwtToken(token, publicKey) {
+async function verifyJwtToken(token) {
+  let publicKey;
+  try {
+    publicKey = await fetchPublicKey();
+  } catch (error) {
+    console.error('Error fetching public key:', error);
+  }
+
   try {
     const decoded = jwt.verify(token, publicKey, { algorithms: ['RS256'] });
     // If the token is valid, 'decoded' will contain the token payload

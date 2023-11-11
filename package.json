@@ -9,6 +9,7 @@
   "dependencies": {
     "applicationinsights": "^2.6.0",
     "axios": "^1.4.0",
+    "azure-functions-core-tools": "^4.0.5455",
     "dotenv": "^16.0.3",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.6.0",
