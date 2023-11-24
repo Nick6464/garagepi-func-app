@@ -48,7 +48,7 @@ module.exports = async function (context, req) {
       }
 
       // Make an HTTP request to the Raspberry Pi
-      let resp = await axios.get(`${RASPBERRY_PI_ENDPOINT}/toggle`, {
+      let resp = await axios.get(`${RASPBERRY_PI_ENDPOINT}/press`, {
         headers: {
           Authorization: req.headers.authorization,
         },
