@@ -4,7 +4,6 @@ const jwksClient = require('jwks-rsa');
 require('dotenv').config();
 
 const { AZURE_AD_TENANT_ID, RASPBERRY_PI_ENDPOINT } = process.env;
-
 const isDev = process.env.NODE_ENV === 'development';
 
 module.exports = async function (context, req) {
@@ -20,9 +19,7 @@ module.exports = async function (context, req) {
       };
       return;
     }
-
     console.log('Decoded token:', decodedToken);
-
     try {
       const currentTimestamp = Math.floor(Date.now() / 1000);
       if (decodedToken.exp && currentTimestamp >= decodedToken.exp) {
@@ -44,9 +41,9 @@ module.exports = async function (context, req) {
         };
         return;
       }
-      let resp = await axios.get(`https://${RASPBERRY_PI_ENDPOINT}/press`, {
+      let resp = await axios.get(`${RASPBERRY_PI_ENDPOINT}/press`, {
         headers: {
-          Authorization: req.headers.authorization,
+          authorization: req.headers.authorization,
         },
       });
       console.log('Toggle request sent successfully');
@@ -58,7 +55,7 @@ module.exports = async function (context, req) {
       console.error('Error:', error);
 
       context.res = {
-        status: 401, // Unauthorized
+        status: 401,
         body: 'Unauthorized: Token validation failed',
       };
     }
