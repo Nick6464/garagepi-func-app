@@ -24,7 +24,6 @@ module.exports = async function (context, req) {
     console.log('Decoded token:', decodedToken);
 
     try {
-      // Check if the token is expired
       const currentTimestamp = Math.floor(Date.now() / 1000);
       if (decodedToken.exp && currentTimestamp >= decodedToken.exp) {
         console.log('Token has expired');
@@ -40,18 +39,16 @@ module.exports = async function (context, req) {
       if (!userRoles.includes(requiredRole)) {
         console.log('User does not have the required role');
         context.res = {
-          status: 403, 
+          status: 403,
           body: 'User does not have the required role',
         };
         return;
       }
-      // Make an HTTP request to the Raspberry Pi
       let resp = await axios.get(`https://${RASPBERRY_PI_ENDPOINT}/press`, {
         headers: {
           Authorization: req.headers.authorization,
         },
       });
-      // Return a success response to the client
       console.log('Toggle request sent successfully');
       context.res = {
         status: 200,
@@ -76,6 +73,7 @@ module.exports = async function (context, req) {
 };
 async function verifyJwtToken(token) {
   try {
+    console.log(token);
     const jwksUri = `https://login.microsoftonline.com/${AZURE_AD_TENANT_ID}/discovery/v2.0/keys`;
 
     const signingKey = await getSigningKey(
