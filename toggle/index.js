@@ -41,11 +41,26 @@ module.exports = async function (context, req) {
         };
         return;
       }
+
+      //Get the position of the user from the req headers location
+      const userPosition = req.headers.location;
+      console.log('User position:', JSON.parse(userPosition));
+
+      //if in dev, don't send request to Raspberry Pi
+      if (isDev) {
+        context.res = {
+          status: 200,
+          body: 'Toggle request sent successfully - Dev mode',
+        };
+        return;
+      }
+
       let resp = await axios.get(`${RASPBERRY_PI_ENDPOINT}/press`, {
         headers: {
           authorization: req.headers.authorization,
         },
       });
+
       console.log('Toggle request sent successfully');
       context.res = {
         status: 200,
