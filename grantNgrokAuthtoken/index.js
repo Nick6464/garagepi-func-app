@@ -10,7 +10,8 @@ const supabase = createClient(
 );
 
 module.exports = async function (context, req) {
-  const setErrorResponse = () => {
+  const setErrorResponse = (error) => {
+    if (error) console.log('Error:', error?.status, error?.message);
     context.res = {
       status: 500,
       body: 'Error assigning token',
@@ -44,35 +45,42 @@ module.exports = async function (context, req) {
 
     // Verify the Pi is in the database
     const { hwid } = req.body;
-    const { data, error } = await supabase
-      .from('garages')
-      .select('hwid')
-      .eq('hwid', hwid);
+    try {
+      const { data, error } = await supabase
+        .from('garages')
+        .select('hwid')
+        .eq('hwid', hwid);
 
-    if (error || !data || data.length === 0) {
-      console.error('Error:', error);
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        setErrorResponse();
+        return;
+      }
+
+      console.log('Pi found:', data[0]);
+    } catch (error) {
+      console.error('Error verifying Pi:', error.message);
       setErrorResponse();
       return;
     }
 
     // Generate a ngrok authtoken for the Pi
-    const response = await generateNgrokAuthToken(hwid);
+    const { data, error } = await generateNgrokAuthToken(hwid);
 
     // Extract the authtoken from the response
-    if (response.error || !response.data || !response.data.token) {
-      console.error('Error:', response.error);
-      setErrorResponse();
+    if (error || !data || !data.token) {
+      setErrorResponse(error);
       return;
     }
 
     // Return the authtoken to the Pi
     context.res = {
       status: 200,
-      body: { token: response.data.token },
+      body: { token: data.token },
     };
   } catch (error) {
-    console.error('Error:', error);
-    setErrorResponse();
+    setErrorResponse(error);
   }
 };
 
@@ -83,8 +91,21 @@ async function generateNgrokAuthToken(hwid) {
     'Ngrok-Version': '2',
   };
 
-  return await axios.post('https://api.ngrok.com/credentials', {
-    description: `Pi: ${hwid}`,
-    headers,
-  });
+  console.log('Generating ngrok authtoken for:', hwid);
+
+  try {
+    const { data, error } = await axios.post(
+      'https://api.ngrok.com/credentials',
+      { description: `hwid: ${hwid}` },
+      { headers: headers }
+    );
+
+    if (error) throw error;
+
+    console.log('Authtoken generated:', data);
+    return { data };
+  } catch (error) {
+    console.error('Error generating ngrok authtoken:', error.message);
+    return { error };
+  }
 }
