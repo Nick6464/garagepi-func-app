@@ -39,21 +39,21 @@ module.exports = async function (context, req) {
     // First try update the garage row with hwid as identifier and edit the ip_address
     const { data, error } = await supabase
       .from('garages')
-      .update({ ip_address: ip })
-      .match({ hwid: hwid });
+      .upsert(
+        { hwid: hwid, ip_address: ip, last_seen: new Date() },
+        { onConflict: 'hwid' }
+      )
+      .select();
 
-    if (error) {
-      const { data, error } = await supabase
-        .from('garages')
-        .insert({ hwid: hwid, ip_address: ip, garage_name: 'Home' });
+    console.log('Data: ', data);
+    console.log('Error: ', error);
 
-      if (error) {
-        context.res = {
-          status: 500,
-          body: 'Error registering with HWID',
-        };
-        return;
-      }
+    if (error || !data || data.length === 0) {
+      context.res = {
+        status: 500,
+        body: 'Error registering with HWID',
+      };
+      return;
     }
 
     context.res = {
