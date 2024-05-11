@@ -45,7 +45,7 @@ module.exports = async function (context, req) {
     if (error) {
       const { data, error } = await supabase
         .from('garages')
-        .insert({ hwid: hwid, ip_address: ip });
+        .insert({ hwid: hwid, ip_address: ip, garage_name: 'Home' });
 
       if (error) {
         context.res = {

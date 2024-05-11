@@ -24,7 +24,7 @@ const verifySession = async (token) => {
   }
 
   // Get the user associated with the token, in turn verifying the token
-  const { user: data, error } = await supabase.auth.getUser(token);
+  const { data, error } = await supabase.auth.getUser(token);
 
   // console.log("Data: ", data);
   // console.log("Error: ", error);
@@ -32,14 +32,14 @@ const verifySession = async (token) => {
   // If the token is invalid, return an error
   if (error) {
     errorCode = 'Unauthorized';
-    return { result, errorCode, user: null };
+    return { result, errorCode, data: null };
   }
 
   result = true;
   // If the token is valid, continue to the next middleware
   console.log('Session verified');
   errorCode = 'Authorized';
-  return { result, errorCode, user };
+  return { result, errorCode, data };
 };
 
 module.exports = {

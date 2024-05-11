@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
+const { verifySession } = require('../supabaseAuth');
 
 const { SUPABASE_KEY } = process.env;
 
@@ -26,9 +27,9 @@ module.exports = async function (context, req) {
       return;
     }
 
-    const { linkedHwid } = req.body;
+    const { hwid } = req.body;
 
-    if (!linkedHwid) {
+    if (!hwid) {
       context.res = {
         status: 400,
         body: 'Invalid body',
@@ -36,10 +37,18 @@ module.exports = async function (context, req) {
       return;
     }
 
+    // strip the bearer token from the headers
+    const bearer = req.headers.authorization.split(' ')[1];
+
+    console.log('Linked HWID: ', hwid);
+
     // Get the ID of the user who made the request
-    const { result, errorCode, user } = await supabase.auth.api.getUserByCookie(
-      req.headers.cookie
-    );
+    const { result, errorCode, data } = await verifySession(bearer);
+
+    console.log('Result: ', result);
+    console.log('Error code: ', errorCode);
+    const user = data.user;
+    console.log('User: ', user.email);
 
     if (!result) {
       context.res = {
@@ -49,31 +58,62 @@ module.exports = async function (context, req) {
       return;
     }
 
-    console.log('User: ', user);
-
-    // First try update the garage row with hwid as identifier and edit the ip_address
-    const { data, error } = await supabase
+    // Check if the HWID exists
+    const { data: garageData, error: garageError } = await supabase
       .from('garages')
-      .update({ ip_address: ip })
-      .match({ hwid: hwid });
+      .select('*')
+      .eq('hwid', hwid);
+
+    if (!garageData || garageData.length === 0) {
+      console.error('HWID not found');
+      context.res = {
+        status: 500,
+        body: 'Error linking',
+      };
+      return;
+    }
+
+    // Check if the HWID is already linked
+    if (garageData[0].owner_id) {
+      console.error('HWID already linked');
+      context.res = {
+        status: 500,
+        body: 'Error linking',
+      };
+      return;
+    }
+
+    // Check if there was an error
+    if (garageError) {
+      console.error('Error:', garageError);
+      context.res = {
+        status: 500,
+        body: 'Error linking',
+      };
+      return;
+    }
+
+    // Link the user to the HWID and return the edited row
+    const { data: linkedGarage, error } = await supabase
+      .from('garages')
+      .update({ owner_id: user.id })
+      .match({ hwid: hwid })
+      .select();
+
+    console.log('Linked garage: ', linkedGarage);
 
     if (error) {
-      const { data, error } = await supabase
-        .from('garages')
-        .insert({ hwid: hwid, ip_address: ip });
-
-      if (error) {
-        context.res = {
-          status: 500,
-          body: 'Error registering with HWID',
-        };
-        return;
-      }
+      console.error('Error:', error);
+      context.res = {
+        status: 500,
+        body: 'Error linking',
+      };
+      return;
     }
 
     context.res = {
       status: 200,
-      body: 'Pi linked',
+      body: linkedGarage,
     };
   } catch (error) {
     console.error('Error:', error);
