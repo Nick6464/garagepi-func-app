@@ -8,6 +8,8 @@ const supabase = createClient(
   SUPABASE_KEY
 );
 
+const { PI_API_KEY } = process.env;
+
 module.exports = async function (context, req) {
   try {
     if (req.method !== 'POST') {
@@ -26,12 +28,20 @@ module.exports = async function (context, req) {
       return;
     }
 
-    const { hwid, ip } = req.body;
+    const { hwid, ip, piApi } = req.body;
 
-    if (!hwid || !ip) {
+    if (!hwid || !ip || !piApi) {
       context.res = {
         status: 400,
         body: 'Invalid body',
+      };
+      return;
+    }
+
+    if (piApi !== PI_API_KEY) {
+      context.res = {
+        status: 401,
+        body: 'Invalid API key',
       };
       return;
     }
